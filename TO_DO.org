@@ -1,0 +1,385 @@
+#+STARTUP: indent 
+
+* CHECK_LIST :: for keeping track of progress and making it easier to work. 
+Try to update it constantly so you can work efficiently. :D 
+
+** DONE Try repurposing old code to Keras
+*** DONE check and list,  which files I need to preprocess the 
+  - main.py
+    - gen_adaptive(m,pcs,times,keep_thoughts=False,name="final")
+  - midi_to_statematrix.py :WHOLE_FILE: 
+  - data.py :WHOLE_FILE:
+  - multi_training.py :WHOLE_FILE:
+  - 
+  - 
+
+*** DONE check and list, what functions I need to copy or reuse 
+
+*** TODO Test Preprocessing EXAMPLE
+***How to do This ?? 
+[] Run the Whole Example ? :Time_consuming:
+[] First put sth together and THEN try to use it. 
+*** DONE Put native preprocessing together
+**** DONE check how does it work alone.  
+**** DONE Find handy functions doing handy work. Write it down. 
+- [-]GET IT DONE [1/2] 
+  * [X] Make diagram !
+  * [ ] Try to use this functions alone.
+**** DONE WHAT IS output in GetPieceBatch(pieces) ?? 
+It's inputForm and Matrix form.
+The batches are randomly selected from the piece and...  put into the train... (I'm not certain about that last thing yet) 
+The randomly selected input form is definitely the food for the RNN model, but what is the purpose of keeping the other half of matrixState ? 
+ 
+**** DONE Try to preprocess a file and get a inputForm_file on output
+**** DONE What is the reason to keep "out" output ? How do I train the model ? How to calculate error ? 
+**** DONE How to feed at liest one segment into the network ? 
+**** DONE How to feed all batches 
+*** DONE learn on how "gen_adaptive" works.
+*** DONE learn how feeding batches into the network will work. 
+** DONE Test the program as it is. (you actually need some reeverse MIDI interpreter)
+** TODO Write your own preprocessing.
+*** DONE Decide on technology 
+music21
+
+
+*** DONE Decide on the coding form of info to the neural net.
+**** note height
+Just a pitch, registered. Is it necessery to have any bounderies ? 
+
+**** note duration
+A duration time in int. 
+
+**** matrics
+is it a note, is it a tempo or is it a pause kind of thing ? 
+Right, and then just makeit appear normally.
+**** tempo
+**** last viscinity ? 
+**** type of note
+**** isChord 
+1 or 0
+
+*** DONE Rewrite the existing one in music21 ["*ABORTED!!!*" ] :: (NOT_POSSIBLE) 
+1. function that makes the info readable. (one tempo and maybe no strange durations ? Initial data manipulation)
+2. Turn the music21 to foodForNN
+3. Read the NN output
+4. Make Midi from output
+
+*** TODO Write your own preprocessing ! 
+**** TODO Do The matrix format.
+***** DONE Do the Raw version
+***** TODO Check if it works and debug if need be.
+
+**** TODO MAKE ADD_INFO
+**** TODO Make output_check work (original piece)
+**** TODO Try out the solution 
+   
+** TODO Try to normalise the data
+   Make the notes not to be trimmed when preparing the scores !!
+
+* DESCRIPTION :: Desc of project and important things
+** INPUTS :: Inputs of neural net
+*** OLD_ 
+
+ - LIST
+   - *Position [1]*
+     =The MIDI note value of the current note. Used to get a vague idea of how high or low a given note is, to allow for differences (like the concept that lower notes are typically 
+     chords, upper notes are typically melody).=
+
+   - *Pitchclass [12]* 
+     #+Begin_EXAMPLE
+     =Will be 1 at the position of the current note, starting at A for 0 and increasing by 1 per half-step, and 0 for all the others. Used to allow selection of more common chords (i.e. 
+     it's more common to have a C major chord than an E-flat major chord).= 
+     #+End_EXAMPLE
+   
+   - *Previous Vicinity [50]:*
+     #+Begin_EXAMPLE
+     =Gives context for surrounding notes in the last timestep, one octave in each direction. The value at index 2(i+12) is 1 if the note at offset i from current note was played last 
+     timestep, and 0 if it was not. The value at 2(i+12) + 1 is 1 if that note was articulated last timestep, and 0 if it was not. (So if you play a note and hold it, first timestep has
+     1 in both, second has it only in first. If you repeat a note, second will have 1 both times.)
+     #+End_EXAMPLE
+
+   - *Previous Context [12]:*
+      #+Begin_EXAMPLE
+     Value at index i will be the number of times any note x where (x-i-pitchclass) mod 12 was played last timestep. Thus if current note is C and there were 2 E's last timestep, the
+     value at index 4 (since E is 4 half steps above C) would be 2.
+      #+End_EXAMPLE
+
+   - *Beat [4]:*
+      #+BEGIN_EXAMPLE
+     Essentially a binary representation of position within the measure, assuming 4/4 time. With each row being one of the beat inputs, and each column being a time step, it basically 
+     just repeats the following pattern:
+     0101010101010101
+     0011001100110011
+     0000111100001111
+     0000000011111111
+      #+END_EXAMPLE
+*** NEW_ 
+**** note height
+Just a pitch, registered. Is it necessery to have any bounderies ? 
+
+**** note duration
+A duration time in int. 
+
+**** Class
+is it a note, is it a tempo or is it a pause kind of thing ? 
+Right, and then just makeit appear normally.
+
+Classes : 
+    note = 0
+    chord = 1
+    rest = 2
+    tempo = 3
+    TimeSignature = 4
+    KeySignature = 5
+    other = 6 
+**** OFFSET
+**** tempo  
+Metronome Mark
+stays on notes until it changes.
+**** metrum_val
+metrum Value
+Stay on notes until it changes.
+** OUTPUTS :: OUTPUTS OF NEURAL NET 
+*** OLD_ 
+*** NEW_ 
+**** Note Height
+**** Note Duration 
+**** Note name
+**** Offset ? 
+**** Class
+Rest or Note or different 
+** PREPROCESSING Functions 
+*** NEW_ Converting input 
+
+
+*** OLD_ Converting input 
+
+#+BEGIN_SRC python
+def noteInputForm(note, state, context, beat):
+    position = note
+    part_position = [position]
+
+    pitchclass = (note + lowerBound) % 12
+    part_pitchclass = [int(i == pitchclass) for i in range(12)]
+    # Concatenate the note states for the previous vicinity
+    part_prev_vicinity = list(itertools.chain.from_iterable((getOrDefault(state, note+i, [0,0]) for i in range(-12, 13))))
+
+    part_context = context[pitchclass:] + context[:pitchclass]
+
+    test = part_position + part_pitchclass + part_prev_vicinity + part_context + beat + [0]
+    #test = np.array(test)
+    #print('NIF')
+    #print(test.shape) # >>>>> (80,) 
+    return part_position + part_pitchclass + part_prev_vicinity + part_context + beat + [0]
+
+def noteStateSingleToInputForm(state,time):
+    beat = buildBeat(time) # for every tick build beat. 
+    context = buildContext(state)
+    #state = np.array(state)
+    #print(state.shape) #>>>>> (78,2) | len(state) == 78
+    #print(time) time iteruje od 0 do 127, czyli ma 128 wartości
+
+    #TB Cont... >>> 
+#+END_SRC
+
+    #+BEGIN_COMMENT Conversion
+   
+    ----------------------------------------------------
+    '''
+    What happens here is assigning 80 part list based on every 2 part element in StateMatrix (128,78,2) >>> (128,78,80) 
+    So for every state of (78,2) there is convertion to  (78,80). 
+    It is based of : 
+    - Note :: outside
+    - state :: outside
+    - context :: inside
+    - beat :: inside
+    - time :: outside 
+    '''
+    ----------------------------------------------------
+    #+END_COMMENT
+
+
+#+BEGIN_SRC python
+    test = [noteInputForm(note, state, context, beat) for note in range(len(state))]
+    #test = np.array(test)
+    #print(test.shape) # >>>> (78,80)
+    
+    return [noteInputForm(note, state, context, beat) for note in range(len(state))]
+
+#+END_SRC
+ 
+* NOTES :: Current notes to remember 
+
+** BUGS
+
+** Notable Questions 
+1. How do I feed this matrix info to the network ?
+2. what do I need to do with chords ? 
+   - Make a state_of_keyboard ?
+   - Make offset input node ?
+   
+3. How do I manage TIME in my approach ? 
+   - Do I just make it sequence and hope the duration will fix it ?
+   - Should I make an offset grid ?
+   X THE ANSWER IS : I'm taking the EASY aproach ! MAKE IT ALL A SEQUENCE !
+
+*** How do I plan to feed info to the network ?  
+It would be wise to do it in chunks. But I don't have time.
+*** PROBLEM : When cutting random elements I need to know under what metrum and tempo it is. 
+** Music21 needed functions
+note.Note
+rest.Rest
+note.offset
+score.flat.elements
+note.type
+meter.TimeSignature
+Stream.pop()
+Stream.remove(targetOrList, *, shiftOffsets=False, recurse=False)
+Stream.removeByClass(classFilterList)
+Stream.removeByNotOfClass(classFilterList)
+Stream.replace(target: music21.base.Music21Object, replacement: music21.base.Music21Object, *, recurse: bool = False, allDerived: bool = True) → None
+Stream.template(fillWithRests=True, removeClasses=None, retainVoices=True)
+Stream.write(*args, **kwargs)
+Score.makeNotation(meterStream=None, refStreamOrTimeRange=None, inPlace=False, bestClef=False, **subroutineKeywords)
+Music21Object.getOffsetInHierarchy(site) → Union[float, fractions.Fraction]
+Music21Object.purgeOrphans(excludeStorageStreams=True) → None
+Score.flattenParts(classFilterList=('Note', 'Chord'))
+score.insert(<offset>, <Object>)
+
+
+writing to midi
+
+*** How do I go about making the program from this ? 
+some of the training data have very bizzare durations and measurements. :o 
+Does it have something to do with tempo ? or metrum ? 
+It's probably tempo
+
+So now I need to code this into numbers and it will be perfecto. :D 
+** Need to remember and include in Check List later 
+1. Staccato needs to be checked for it popping up when transforming into midi.
+2. state of the keyboard ? 
+3. INPUT and OUTPUT shape of DATA 
+ 
+** Function structures
+
+
+
+
+#+BEGIN_SRC python
+ 
+def score_to_food(score) :
+    for object in score :
+    """
+    1. early preprocessing 
+    - rationalising the tempo 
+    
+    2. prepering data for handy extraction.
+    - making template data class or functions.
+    - making every extraction part easy.
+    3. extracting data from midi to stateMatrix
+    - input types
+    - format of input types
+    - format of time and continuity (absolute time and realtive time. Time steps or last note and duration or pause ? ) 
+    
+    
+    """
+
+
+    
+    return food
+
+#+END_SRC
+** RAMBLING IN POLISH 
+*** Metrum i tempo  
+**** Q 1
+CO teraz należy zrobić ? 
+ env_state pomoże mi utrzymać konsekwencję tylko, jeżeli nie będę randomizował małych kawałków. 
+ Czy jest sposób, żeby szybko i w prosty sposób pytać o metro i tempo ? 
+ Jeżeli mogę to zrobić, to mogę randomizowac, jeżeli mogę randomizować,
+ To mogę sprawić, że ten projekt naprawdę się uda. 
+ Mogę znaleźć funkcję wskazującą na tempo i metrum nutki, o którą zapytam.
+**** A 1
+Mogę najpierw przetworzyć wszystko na papu, wtedy dorobić wszystkim wartości najbliższego
+Metrum i tempa i wtedy dzielić na części. 
+
+Ale wynika z tego pytnie z następnego tematu : JAK DZIELIĆ NA CZĘŚCI ? CO 2 TAKTY ? 
+ 
+*** Dzielenie na małe części 
+**** Q 1 Różne metrum 
+Jak podzielić na części utwór o różnym metrum ? 
+Jeżeli co 2 takty, to jak zapisać te listy o różnych długościach ?
+**** Q 2 Co jeżeli spłaszczone jest bez beatu ?  
+Czy jeżeli spłaszczę notację (flat), to offset będzie ogólny ? 
+Jeżeli tak, to czy dam radę ustalić beat ? Też uda się to zrobić na samym początku,
+tak samo jak metrum.
+
+**** Q 3 Czy rózne długości fragmentów przeszkadzają ? 
+Mogą przeszkadzać, bo sieć NN przyjmuje chyba tylko równe wymiary, poza tym,
+Nie wiadomo, czy przekształci się to na macierz. 
+
+**** Q 4 Czy jeżeli potrzeujemy równych długości macierzy, to co, jeżeli to same nie-nuty ? 
+Z zasady będę liczył długość w obiektach, a nie w beatach, choćbym nie wiem, co zrobił, 
+Inaczej się nie uda. 
+
+**** Q 5 Czy taki mix nut i nie nut, wybity z fraz, bez podziału na takty nauczy się czego trzeba ? 
+Zamierzam sprawdzić to na oryginalnym, napisanym już programie zmieniając długość fragmentu. 
+Musze tylko napisać program zapisujący wynik do midi oraz jakoś sensownie karmić ten model. 
+
+*** General 
+Metrum i tempo przygotowujemy po przedworzeniu wszystkiego innego.
+
+Fragmenty muszą być równej długości. 
+
+Długość fragmentów jest arbitralna, choć by uzyskac melodię sugeruję 4 (ćwierćnuty) 
+
+ 
+*** Jak przetwarzać akordy ? 
+rozbić je. 
+Pamiętać, że Offset pojedynczych dźwięków ustawiony na 0 z jakiegoś powodu
+
+*** Zarządzanie opcjami 
+Zdecydowałem sie zrobić plik z opcjami.  
+
+*** W jaki sposób zgrać obiekty z listą cech metrum i tempa ? 
+Przetworzyć score na taki, który posiada 3 wiersze ? 
+
+*** Prawdopodobnie nie mogę zrobić fragmentacji utworu ze względu na nierówne frazy muzyczne.
+
+*** Musze zrobić bazy X i Y. Listę przykładów i listę odpowiedzi.
+*** DONE Długości utworów są arbitralne !! Przecież nie da się tego zaprezentować w postaci macierzy ! Trzeba ? (2,) ?????
+*** DONE Muszę zapisać te utwory w formie fragmentów. Czy będą losowane ? (Wejście potrzebuje zestawu fragmentów.)
+*** DONE Mam ogarnięte fragmenty, ale out i in nie są odpowiednio przesunięte.
+    Muszę zadbać o to, aby każdy fragment mał odpowiednik w zestawie out. W
+    obecnym stanie jest poprostu o jeden mniej fragment. 
+    ZROBIONE 
+*** TODO "Oryginał ma problem z odpowiednikami i shape'em."
+    Trzeba zobaczyć, czy model będzie się uczyć, kiedy poprawię odpowiedniki
+    fragmentów x i y oraz zmienię na logiczniejszy podział fragmentów. 
+    Dokładnie [10*utwory]*128*[78*80]"
+
+*** DONE Zlikwidować "nan" loss.
+    Na stacku coś jest, prawdopodobnie mam problem z normalizacją, jakimś
+    eksplodującym skalarem albo coś. 
+*** DONE NAPISAĆ funkcję usuwającą tylko tempo.MetronomeMark
+*** Part offsety są zawsze zerowe i mieszają się przy stosowaniu "flat".
+**** Czy Part to bardziej podział czasowy, czy np. pięcioliniowy, na klucze ? 
+**** W każdym wypadku mozna spróbować zostawić tylko jeden part i uczyć się tylko na tym.
+*** 102,107,79,16
+*** TODO Dekoder odpowiedzi
+**** Cechy:
+***** Dostaje wyniki po nutce do listy o zdefiniowanej długości.
+***** tłumaczy listę na score.
+***** konwertuje score na midi.
+***** Czy wejściem jest sekwencja ? seq to note ?
+*** DONE Predyktor ?? Czy jest w kerasie ?
+*** TODO EXPLOZJA LOSS :
+**** Wywaliło mi cały loss w okolicy punktu optymalnego. (CHYBA)
+Czy to kwestia tego, że przeskakuję optimum ? 
+Jeżeli tak, to czemu nagle loss wybucha zamiast oscylować ? 
+**** Pomysły na naprawę :
+1. pozmieniać Hiperparametry 
+2. Sprawdzić raz jeszcze, czy target jest dobry.(Bo w praktyce zmieniałem
+tylko target )
+3. 
+*** TODO Validation_acc = 0.0000 ???
+**** Dlaczego ?

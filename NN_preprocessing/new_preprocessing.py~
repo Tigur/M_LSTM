@@ -1,0 +1,155 @@
+from music21 import *
+from collections import Counter
+import numpy as np
+import enum
+import random
+import options
+from .m_classes import *
+from .manipulate_score import *
+import os
+import pdb 
+
+from misc import *
+
+
+
+
+               
+
+out_path = './t_output/test.mid'
+
+def getRandomFragment(score):
+    start = None
+    max_start = len(score) - options.fragment_len
+    while start > max_start or start == None  :
+        start = random.randint(0,max_start)
+    fragment = score[start:start+options.fragment_len]
+
+
+    return fragment
+           
+        
+def object_to_food(object):
+    #pdb.post_mortem()
+
+    pitch = -1
+    duration = -1
+    o_class = None
+    offset = None
+    tempo_one = -1
+    TimeSignature = (0,0)
+    
+    offset = object.offset
+    o_class = check_class(object).value
+    if isinstance(object, note.GeneralNote):
+        duration = object.duration.quarterLength
+    if isinstance(object, note.Note):
+        pitch = object.pitch.midi
+    if isinstance(object, tempo.MetronomeMark):
+        tempo_one = object.number
+
+    input_list = [pitch, duration, o_class, offset]
+    
+    return input_list
+
+
+
+
+
+def fragment_to_food(fragment) :
+    
+    ret = [object_to_food(object) for object in fragment]
+
+    return ret
+
+def getFoodPack(score):
+    """ Forms a food Pack.
+    One pack contains of multiple fragments of food
+    First forms a rawPack and then transforms it to food pack 
+    """
+    
+    score = score.flat # check if it will work
+    split_chords(score)
+    tempo = check_tempo(score)[0][0]
+    simplify_tempo(score,tempo)
+
+    
+    
+    rawPack = [getRandomFragment(score) for element in range(options.fragment_number)]
+    foodPack = [fragment_to_food(fragment) for fragment in rawPack]
+
+    return foodPack 
+
+def getLongFood(score):
+    score = prepare(score)
+    #score = score.flat.elements
+    food = []
+    TimeSignature, tempo = get_new_info(score)
+    
+    for index, object in enumerate(score,0) :
+       # try:
+            food.append(object_to_food(object))
+            food[index].append(TimeSignature[index][0])
+            food[index].append(TimeSignature[index][1])
+            food[index].append(tempo[index])
+      #  except AttributeError:
+        #    print("WRONG TYPE")
+         #   print("You tried to use this : ", object)
+
+    
+    
+    out = food[1:]
+
+    return food,out
+    
+    
+def make_food(scores):
+    """
+    scores - A list of all paths to midiFiles.
+    """
+    
+    
+    if options.longInput :
+
+        food = [getLongFood(score)[0] for score in scores]
+        out = [getLongFood(score)[1] for score in scores]
+
+        return food,out
+        
+
+        
+    else:
+        for score in scores :
+
+
+
+            getFoodPack(score)
+
+        return None 
+
+def loadScores(dirpath = '/home/resolution/POważne_sprawy/studyjne/PRACA_INŻ/Inż_repo/MUSIC_PACKAGE/'):
+
+    scores = []
+
+    for fname in os.listdir(dirpath):
+        if fname[-4:] not in ('.mid','.MID'):
+            continue
+
+        name = fname[:-4]
+        current_path = dirpath + fname
+        scores.append(converter.parse(current_path))
+        
+        
+        print("Loaded {}".format(name))
+
+    return scores
+
+    
+if __name__ == '__main__':
+
+    rel_path = '/home/resolution/POważne_sprawy/studyjne/PRACA_INŻ/Inż_repo/MUSIC_PACKAGE/fav/'
+    
+    midiFile = rel_path + 'islamei.mid'
+    midi_to_stateMat(midiFile)
+    print(midiFile)
+    

@@ -1,0 +1,31 @@
+import NN_preprocessing.new_preprocessing as prep
+import unittest
+from NN_preprocessing import options
+from music21 import *
+
+
+def loadTestOpt():
+    options.fragment_len = 10
+    options.fragment_number = 10
+    options.longInput = True
+    options.fragments = True
+    options.binary = False
+
+def custom_melody():
+    stream = stream.Stream()
+    note1 = note.Note('C1')
+    note2 = note.Note('D1')
+    note3 = note.Note('E1')
+    tempo = tempo
+
+
+class Test_new_preproc(unittest.TestCase):
+    scores = prep.loadScores()
+    def test_make_food(self):
+        loadTestOpt()
+        fragFood = prep.make_food(scores)
+        options.fragments = False
+        longFood = prep.make_food(scores)
+
+
+
