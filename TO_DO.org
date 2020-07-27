@@ -1,4 +1,4 @@
-#+STARTUP: indent 
+* #+STARTUP: indent
 
 * CHECK_LIST :: for keeping track of progress and making it easier to work. 
 Try to update it constantly so you can work efficiently. :D 
@@ -383,3 +383,6 @@ tylko target )
 3. 
 *** TODO Validation_acc = 0.0000 ???
 **** Dlaczego ?
+
+*** better loss function
+**** class has to be perfect.

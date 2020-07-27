@@ -3,12 +3,12 @@ import enum
 
 class MusicLabel(enum.Enum):
     note = 0
-    chord = 1
-    rest = 2
-    tempo = 3
-    TimeSignature = 4
-    KeySignature = 5
-    other = 6
+    chord = 1000
+    rest = 20000
+    tempo = 30000
+    TimeSignature = 40000
+    KeySignature = 50000
+    other = 600000
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'

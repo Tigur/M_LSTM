@@ -6,6 +6,9 @@ from tensorflow.keras.layers import Dense, Dropout, LSTM
 import gaussian_nll as gauss
 from keras import losses
 
+
+tf.enable_eager_execution()
+
 from NN_preprocessing import new_preprocessing as prep
 import numpy as np
 import pdb
@@ -15,6 +18,9 @@ from NN_preprocessing import options
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 import time
 #import pred
+from cost_fun import *
+
+
 
 
 def predictionList(model, predLen, division):
@@ -26,7 +32,7 @@ def predictionList(model, predLen, division):
     for _ in range(predLen):
         #breakpoint()
         y = model.predict(x)
-        y = y[0][-1].tolist()
+        y = y[0].tolist()
         x = x.tolist()
         predList.append(y)
         x = [x[0][1::]]
@@ -50,17 +56,21 @@ validation_path = './music_long/validation/'
 
 #main_path = './s_subset/main/'
 #all_path = './s_subset/'
-#rel_path = './music_lowLen/'
 #validation_path = './s_subset/validation/'
+
+#rel_path = './music_lowLen/'
 #scores = prep.loadScores(main_path)
 #validation_scores = prep.loadScores(validation_path)
 all_scores = prep.loadScores(all_path)
-
-scores = all_scores[:-14:]
-validation_scores = all_scores[-14::]
+validation_len = -4 # MUST BE negative
+scores = all_scores[:validation_len:]
+validation_scores = all_scores[validation_len::]
 
 i ,o = prep.make_food(scores)
 val_i, val_o = prep.make_food(validation_scores)
+
+
+
 
 division = prep.normalisation_division(all_scores)
 #val_division = prep.normalisation_division(validation_scores)
@@ -105,8 +115,9 @@ model.add(Dropout(0.2))
 
 model.add(Dense(d_cell_num,activation='softmax')) # >>> odpowiada za ostatni shape.
 
-f_loss = 'categorical_crossentropy'
-opt = tf.keras.optimizers.Adam(lr=1e-7, decay=1e-8)
+#f_loss = classClippingLoss
+f_loss = 'mse'
+opt = tf.keras.optimizers.Adam(lr=1e-4, decay=1e-5)
 
 model.compile(loss=f_loss,     # gauss.gaussian_nll
               optimizer = opt,
@@ -118,7 +129,10 @@ chp_path = "RNN_Checkpoint-{epoch:02d}-{val_acc:.3f}"
 checkpoint = ModelCheckpoint("models/{}.model".format(chp_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max')) # saves only the best ones
 if __name__ == "__main__":
 
-    history=model.fit(i, o, batch_size=2, epochs=100,
+    history=model.fit(i, o, batch_size=5, epochs=100,
               callbacks=[tensorboard,checkpoint],
                     validation_data=(val_i,val_o))
-    predList = predictionList(model, 500, division)
+    predList = predictionList(model, 100, division)
+#    breakpoint()
+    predScore = prep.conv_to_music(predList,division)
+    fp = predScore.write('midi',fp='./predicted/sample.mid')

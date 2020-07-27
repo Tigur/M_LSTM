@@ -13,7 +13,7 @@ import os
 import pdb
 import itertools
 from misc import *
-
+import sys
 from formatting import binary
 
 
@@ -61,7 +61,7 @@ def normalisation_division(scores):
     division = []
     division.append(pitches)
     division.append(durations)
-    division.append([6])
+    division.append([MusicLabel.other.value])
     division.append(offsets)
     division.append(tempos)
     division.append(met_numerator)
@@ -133,10 +133,10 @@ def object_to_food(object):
     return input_list
 
 def randomNote(rangeList):
-    pitch = random.randint(0,rangeList[0]) #randInt in range
-    duration = random.randint(0,int(rangeList[1])) # randInt in range
-    o_class = random.randint(0,rangeList[2])
-    offset = random.randint(0,int(rangeList[3]))
+    pitch = random.randint(0,rangeList[0])/rangeList[0] #randInt in range
+    duration = random.randint(0,int(rangeList[1]))/rangeList[1] # randInt in range
+    o_class = int(random.randint(0,rangeList[2])/rangeList[2])
+    offset = random.randint(0,int(rangeList[3]))/rangeList[3]
     #tempo_one = random.randint(0,int(rangeList[4])) #randInt in range
     #TSig_n = random.randint(0,rangeList[5]) #randInt in range
     #TSig_d = random.randint(0,rangeList[6]) #randInt in range
@@ -144,9 +144,9 @@ def randomNote(rangeList):
     randNote = [pitch,duration,o_class,offset]
     return randNote
 def randomSeq(rangeList):
-    tempo_one = random.randint(0,int(rangeList[4])) #randInt in range
-    TSig_n = random.randint(0,rangeList[5]) #randInt in range
-    TSig_d = random.randint(0,rangeList[6]) #randInt in range
+    tempo_one = random.randint(0,int(rangeList[4]))/rangeList[4] #randInt in range
+    TSig_n = int(random.randint(0,rangeList[5])/rangeList[5]) #randInt in range
+    TSig_d = int(random.randint(0,rangeList[6])/rangeList[6]) #randInt in range
     sequence = []
 
     for _ in range(options.fragment_len):
@@ -317,8 +317,66 @@ def obtain_init(sc_dir = './music_short/fav/'):
     i = np.array(i)
 
     return i
+def denormalize(vect,div):
 
+    #breakpoint()
+    for index,val in enumerate(vect):
+        vect[index] = val*div[index]
+    return vect
 
+def pick_closest_class(val):
+    all_list = [val,MusicLabel.note.value,MusicLabel.rest.value,MusicLabel.tempo.value,MusicLabel.TimeSignature.value]
+    all_list.sort()
+
+    v_ind = all_list.index(val)
+    if v_ind == len(all_list)-1:
+        val = all_list[v_ind-1]
+
+    if (all_list[v_ind+1] - all_list[v_ind]) >= (all_list[v_ind] - all_list[v_ind-1]):
+        val = all_list[v_ind-1]
+
+    else:
+        val = all_list[v_ind+1]
+
+    return val
+def vect_to_music(vect,div):
+    vect = denormalize(vect,div)
+    vect[2] = int(vect[2])
+    vect[2] = pick_closest_class(vect[2])
+
+    print(vect[2])
+    #breakpoint()
+
+    if vect[2]==MusicLabel.note.value:
+        music_obj = note.Note()
+        music_obj.pitch.midi = vect[0]
+        music_obj.duration.quarterLength = vect[1]
+        music_obj.offset = vect[3]
+    if vect[2]==MusicLabel.rest.value:
+        music_obj = note.Rest()
+        music_obj.duration.quarterLength = vect[1]
+        music_obj.offset = vect[3]
+    if vect[2]==MusicLabel.tempo.value:
+        music_obj = tempo.MetronomeMark()
+        music_obj.number = vect[4]
+        music_obj.offset = vect[3]
+    if vect[2]==MusicLabel.TimeSignature.value:
+        music_obj = meter.TimeSignature()
+        music_obj.numerator = int(vect[5])
+        music_obj.denumerator = int(vect[6])
+        music_obj.offset = vect[3]
+    if vect[2]==MusicLabel.KeySignature.value:
+        music_obj = key.KeySignature()
+
+    return music_obj
+
+def conv_to_music(prediction,div):
+    pred_score = stream.Score()
+    for num_obj in prediction:
+        music_obj = vect_to_music(num_obj,div)
+        pred_score.append(music_obj)
+
+    return pred_score
 
 if __name__ == '__main__':
 
