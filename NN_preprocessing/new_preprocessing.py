@@ -362,6 +362,13 @@ def vect_to_music(vect,div):
         music_obj.offset = vect[3]
     if vect[2]==MusicLabel.TimeSignature.value:
         music_obj = meter.TimeSignature()
+
+        if int(vect[5]) == 0:
+            vect[5] = 1
+        if int(vect[6]) == 0:
+            vect[6] = 1
+
+
         music_obj.numerator = int(vect[5])
         music_obj.denumerator = int(vect[6])
         music_obj.offset = vect[3]

@@ -1,0 +1,3 @@
+Using TensorFlow backend.
+WARNING:tensorflow:From model_run.py:10: The name tf.enable_eager_execution is deprecated. Please use tf.compat.v1.enable_eager_execution instead.
+

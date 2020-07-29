@@ -16,9 +16,33 @@ import pprint as pp
 from NN_preprocessing import options
 
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.models import load_model
 import time
 #import pred
 from cost_fun import *
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument("-f","--file", dest="filename", default='current_sample.mid',
+                    help="name of the output file", type=str)
+parser.add_argument("-e","--epochs",dest="arg_epochs", default=100,
+                    help="numebr of epochs", type=int)
+parser.add_argument("--oLength", dest="o_len", default=100,
+                    help="output song length",type=int)
+parser.add_argument("--fragmentLen", dest="fragLen", default=20,
+                    help="Length of each fragment",type=int)
+parser.add_argument("--fragmentNum", dest="fragNum", default=20,
+                    help="Number of fragments from one song",type=int)
+parser.add_argument("-lr", dest="learning_rate", default=1e-4,
+                    help="learning rate", type=float)
+parser.add_argument("--decay",dest="decay",default=1e-5,
+                    help="decay rate", type=float)
+
+args = parser.parse_args()
+
+fileName = './predicted/' + args.filename
+options.fragment_len = args.fragLen
+options.fragment_num = args.fragNum
 
 
 
@@ -129,10 +153,12 @@ chp_path = "RNN_Checkpoint-{epoch:02d}-{val_acc:.3f}"
 checkpoint = ModelCheckpoint("models/{}.model".format(chp_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max')) # saves only the best ones
 if __name__ == "__main__":
 
-    history=model.fit(i, o, batch_size=5, epochs=100,
+    model.save('models/SAVED/my_model-{epoch:02d}-{val_acc:.3f}.h5')
+
+    history=model.fit(i, o, batch_size=5, epochs=args.arg_epochs,
               callbacks=[tensorboard,checkpoint],
                     validation_data=(val_i,val_o))
-    predList = predictionList(model, 100, division)
+    predList = predictionList(model, args.o_len, division)
 #    breakpoint()
     predScore = prep.conv_to_music(predList,division)
-    fp = predScore.write('midi',fp='./predicted/sample.mid')
+    fp = predScore.write('midi',fp=fileName)
